@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a0f">
+<title>Blackjack Counter v6</title>
+<style>
+:root {
+    --bg-1: #0a0a0f;
+    --bg-2: #14141f;
+    --text: #f5f5fa;
+    --text-dim: #9090a8;
+    --plus: #2ecc71;
+    --plus-glow: rgba(46, 204, 113, 0.6);
+    --minus: #e74c3c;
+    --minus-glow: rgba(231, 76, 60, 0.6);
+    --neutral: #7f8c8d;
+    --accent: #4a90e2;
+    --accent-glow: rgba(74, 144, 226, 0.5);
+    --purple: #9b59b6;
+    --orange: #e67e22;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+
+body {
+    margin: 0;
+    font-family: var(--font);
+    background: radial-gradient(ellipse at top, #1a1a2e 0%, var(--bg-1) 50%, #000 100%);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    touch-action: manipulation;
+    position: relative;
+}
+
+.bg-particles { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.bg-particle {
+    position: absolute; width: 3px; height: 3px; border-radius: 50%;
+    background: rgba(74, 144, 226, 0.4); animation: float-up linear infinite;
+}
+@keyframes float-up {
+    0% { transform: translateY(100vh) scale(0); opacity: 0; }
+    10% { opacity: 1; } 90% { opacity: 1; }
+    100% { transform: translateY(-10vh) scale(1.5); opacity: 0; }
+}
+
+header {
+    padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;
+    gap: 12px;
+    background: linear-gradient(180deg, rgba(26,26,46,0.9), rgba(10,10,15,0.5));
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    position: relative; z-index: 2; min-height: 56px;
+}
+
+.title {
+    font-weight: 900; font-size: 1.1rem; letter-spacing: 1px;
+    background: linear-gradient(90deg, #4a90e2, #9b59b6, #4a90e2);
+    background-size: 200% auto;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shine 3s linear infinite;
+}
+@keyframes shine { to { background-position: 200% center; } }
+
+.back-btn {
+    background: rgba(255,255,255,0.08); color: var(--text);
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 7px 12px; border-radius: 8px;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    font-family: inherit; transition: all 0.2s;
+}
+.back-btn:active { transform: scale(0.94); }
+
+.toggle-btn {
+    background: rgba(255,255,255,0.08); color: var(--text-dim);
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 7px 10px; border-radius: 8px;
+    font-size: 0.8rem; font-weight: 600; cursor: pointer;
+    font-family: inherit; transition: all 0.25s; white-space: nowrap;
+}
+.toggle-btn:active { transform: scale(0.94); }
+.toggle-btn.active {
+    background: linear-gradient(135deg, #4a90e2, #357abd);
+    color: white; border-color: transparent;
+    box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.deck-selector { display: flex; gap: 6px; }
+
+.deck-btn {
+    background: rgba(255,255,255,0.06); color: var(--text-dim);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 7px 11px; border-radius: 8px;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    font-family: inherit;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.deck-btn:active { transform: scale(0.9); }
+.deck-btn.active {
+    background: linear-gradient(135deg, #4a90e2, #357abd);
+    color: white; border-color: transparent;
+    box-shadow: 0 0 15px var(--accent-glow);
+    transform: scale(1.05);
+}
+
+.menu-screen {
+    flex: 1; display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    gap: 18px; padding: 24px;
+    position: relative; z-index: 2;
+    overflow-y: auto;
+}
+
+.menu-title {
+    font-size: 2.2rem; font-weight: 900; text-align: center;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, #4a90e2, #9b59b6, #4a90e2);
+    background-size: 200% auto;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shine 3s linear infinite;
+    margin-bottom: 10px;
+}
+
+.menu-subtitle {
+    color: var(--text-dim); font-size: 0.95rem;
+    text-align: center; margin-top: -10px; margin-bottom: 10px;
+}
+
+.menu-btn {
+    width: 100%; max-width: 340px;
+    padding: 22px 24px; border: none; border-radius: 20px;
+    font-family: inherit; font-size: 1.2rem; font-weight: 800;
+    color: white; cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    text-align: left; position: relative; overflow: hidden;
+    display: flex; align-items: center; gap: 16px;
+}
+.menu-btn:active { transform: scale(0.97); }
+
+.menu-btn.hilo {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    box-shadow: 0 10px 30px rgba(46, 204, 113, 0.4);
+}
+.menu-btn.specific {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+    box-shadow: 0 10px 30px rgba(155, 89, 182, 0.4);
+}
+.menu-btn.buttons {
+    background: linear-gradient(135deg, #e67e22, #d35400);
+    box-shadow: 0 10px 30px rgba(230, 126, 34, 0.4);
+}
+
+.menu-btn .icon { font-size: 2rem; line-height: 1; }
+.menu-btn .label-group { display: flex; flex-direction: column; gap: 2px; }
+.menu-btn .sublabel { font-size: 0.8rem; font-weight: 500; opacity: 0.85; }
+
+.screen {
+    flex: 1; display: none; flex-direction: column;
+    position: relative; z-index: 2; overflow: hidden;
+}
+.screen.active { display: flex; }
+
+.history {
+    display: flex; gap: 8px; padding: 12px 16px;
+    overflow-x: auto; align-items: center; min-height: 60px;
+    scrollbar-width: none; background: rgba(0,0,0,0.2);
+}
+.history::-webkit-scrollbar { display: none; }
+
+.chip {
+    flex-shrink: 0; min-width: 40px; height: 40px;
+    border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 1rem; color: white; padding: 0 8px;
+    animation: chip-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+@keyframes chip-in {
+    0% { transform: scale(0.3) rotate(-20deg); opacity: 0; }
+    60% { transform: scale(1.15) rotate(5deg); }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+.chip.p { background: linear-gradient(135deg, #2ecc71, #27ae60); box-shadow: 0 4px 12px var(--plus-glow); }
+.chip.n { background: linear-gradient(135deg, #7f8c8d, #5d6d7e); }
+.chip.m { background: linear-gradient(135deg, #e74c3c, #c0392b); box-shadow: 0 4px 12px var(--minus-glow); }
+
+.undo-btn {
+    flex-shrink: 0; background: rgba(255,255,255,0.08); color: var(--text-dim);
+    border: 1px solid rgba(255,255,255,0.15);
+    height: 40px; padding: 0 14px; border-radius: 10px;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    font-family: inherit; transition: all 0.2s;
+}
+.undo-btn:active { transform: scale(0.92); background: rgba(255,255,255,0.15); }
+
+.stats {
+    flex: 1; display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    text-align: center; padding: 10px; min-height: 0;
+}
+
+.running {
+    font-size: 100px; font-weight: 900; line-height: 1;
+    color: var(--text); letter-spacing: -4px;
+    transition: color 0.3s, text-shadow 0.3s;
+    display: inline-block;
+}
+.running.pos {
+    color: #2ecc71; text-shadow: 0 0 30px var(--plus-glow);
+    animation: pulse-green 1.5s ease-in-out infinite;
+}
+.running.neg {
+    color: #e74c3c; text-shadow: 0 0 30px var(--minus-glow);
+    animation: pulse-red 1.5s ease-in-out infinite;
+}
+@keyframes pulse-green {
+    0%, 100% { text-shadow: 0 0 20px var(--plus-glow); }
+    50% { text-shadow: 0 0 45px var(--plus-glow), 0 0 70px rgba(46,204,113,0.3); }
+}
+@keyframes pulse-red {
+    0%, 100% { text-shadow: 0 0 20px var(--minus-glow); }
+    50% { text-shadow: 0 0 45px var(--minus-glow), 0 0 70px rgba(231,76,60,0.3); }
+}
+.running.bump { animation: bump 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes bump {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.25); }
+    100% { transform: scale(1); }
+}
+.running.shake { animation: shake 0.4s; }
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px) rotate(-2deg); }
+    40% { transform: translateX(8px) rotate(2deg); }
+    60% { transform: translateX(-6px) rotate(-1deg); }
+    80% { transform: translateX(6px) rotate(1deg); }
+}
+
+.true {
+    font-size: 28px; margin-top: 8px; color: var(--text-dim);
+    font-weight: 700; transition: color 0.3s;
+}
+.true.pos { color: #2ecc71; }
+.true.neg { color: #e74c3c; }
+.true.bump { animation: bump 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+.seen {
+    font-size: 13px; color: var(--text-dim);
+    margin-top: 14px; text-transform: uppercase;
+    letter-spacing: 2px; font-weight: 600;
+}
+
+.cards-grid {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 8px; padding: 10px 12px 8px;
+}
+
+.card-btn {
+    background: linear-gradient(180deg, #ffffff 0%, #e8e8ec 100%);
+    color: #1a1a28; border: none; border-radius: 12px;
+    font-size: 1.5rem; font-weight: 800;
+    padding: 14px 0 10px; cursor: pointer; font-family: inherit;
+    transition: transform 0.12s, box-shadow 0.2s;
+    box-shadow: 0 3px 0 #999, 0 5px 12px rgba(0,0,0,0.4);
+    display: flex; flex-direction: column; align-items: center;
+    gap: 2px; position: relative; overflow: hidden;
+    opacity: 0;
+    animation: card-enter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+.card-btn:nth-child(1) { animation-delay: 0.03s; }
+.card-btn:nth-child(2) { animation-delay: 0.06s; }
+.card-btn:nth-child(3) { animation-delay: 0.09s; }
+.card-btn:nth-child(4) { animation-delay: 0.12s; }
+.card-btn:nth-child(5) { animation-delay: 0.15s; }
+.card-btn:nth-child(6) { animation-delay: 0.18s; }
+.card-btn:nth-child(7) { animation-delay: 0.21s; }
+.card-btn:nth-child(8) { animation-delay: 0.24s; }
+.card-btn:nth-child(9) { animation-delay: 0.27s; }
+.card-btn:nth-child(10) { animation-delay: 0.30s; }
+.card-btn:nth-child(11) { animation-delay: 0.33s; }
+.card-btn:nth-child(12) { animation-delay: 0.36s; }
+.card-btn:nth-child(13) { animation-delay: 0.39s; }
+@keyframes card-enter {
+    0% { opacity: 0; transform: translateY(30px) scale(0.8); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.card-btn .suit { font-size: 0.9rem; line-height: 1; opacity: 0.85; }
+.card-btn:active {
+    transform: translateY(3px) scale(0.95);
+    box-shadow: 0 0 0 #999, 0 2px 6px rgba(0,0,0,0.4);
+}
+.card-btn.red { color: #c0392b; }
+.card-btn.black { color: #1a1a28; }
+
+.ripple {
+    position: absolute; border-radius: 50%;
+    background: rgba(74, 144, 226, 0.5); transform: scale(0);
+    animation: ripple-anim 0.6s ease-out; pointer-events: none;
+}
+@keyframes ripple-anim { to { transform: scale(4); opacity: 0; } }
+
+.particle {
+    position: fixed; width: 8px; height: 8px; border-radius: 50%;
+    pointer-events: none; z-index: 999;
+    animation: particle-fly 0.7s ease-out forwards;
+}
+@keyframes particle-fly {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+}
+
+.flying-card {
+    position: fixed;
+    background: linear-gradient(180deg, #ffffff 0%, #e8e8ec 100%);
+    border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; font-weight: 800; z-index: 1000;
+    pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    transition: all 0.55s cubic-bezier(0.5, -0.5, 0.5, 1.5);
+}
+
+.reset-btn {
+    margin: 4px 12px max(12px, env(safe-area-inset-bottom)) 12px;
+    background: linear-gradient(135deg, #4a90e2, #357abd);
+    color: white; border: none; border-radius: 12px;
+    padding: 15px; font-size: 1rem; font-weight: 700;
+    cursor: pointer; font-family: inherit; letter-spacing: 1px;
+    transition: all 0.25s; box-shadow: 0 4px 14px var(--accent-glow);
+    position: relative; overflow: hidden;
+}
+.reset-btn:active { transform: scale(0.97); }
+.reset-btn.confirming {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    box-shadow: 0 4px 14px var(--minus-glow);
+    animation: pulse-btn 0.7s infinite;
+}
+@keyframes pulse-btn { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+.reset-wave {
+    position: fixed; border-radius: 50%;
+    background: radial-gradient(circle, rgba(74,144,226,0.6), transparent 70%);
+    pointer-events: none; z-index: 999;
+    animation: wave 0.8s ease-out forwards;
+}
+@keyframes wave {
+    0% { width: 0; height: 0; opacity: 0.8; }
+    100% { width: 600px; height: 600px; opacity: 0; transform: translate(-50%, -50%); }
+}
+
+.specific-panel {
+    flex: 1; overflow-y: auto; padding: 10px 14px;
+    display: flex; flex-direction: column; gap: 8px; min-height: 0;
+}
+
+.card-row {
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 10px 14px;
+    transition: all 0.3s;
+}
+.card-row.empty { opacity: 0.35; }
+.card-row.low { border-color: rgba(231, 76, 60, 0.3); background: rgba(231, 76, 60, 0.08); }
+
+.card-badge {
+    min-width: 44px; height: 44px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 1.1rem;
+    background: linear-gradient(180deg, #fff, #e8e8ec);
+    color: #1a1a28; box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+.card-badge.red { color: #c0392b; }
+
+.card-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.card-count {
+    font-size: 0.9rem; font-weight: 700;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.card-count .left { color: var(--text); }
+.card-count .right { color: var(--text-dim); font-weight: 600; }
+
+.bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; }
+.bar-fill {
+    height: 100%; border-radius: 4px;
+    transition: width 0.4s, background 0.3s;
+    background: linear-gradient(90deg, #2ecc71, #27ae60);
+}
+.card-row.low .bar-fill { background: linear-gradient(90deg, #e74c3c, #c0392b); }
+
+.legend {
+    display: flex; gap: 16px; justify-content: center;
+    padding: 10px 16px; font-size: 0.75rem;
+    color: var(--text-dim); flex-wrap: wrap;
+}
+.legend span { display: flex; align-items: center; gap: 4px; }
+.legend .dot { width: 10px; height: 10px; border-radius: 50%; }
+.legend .dot.green { background: #2ecc71; }
+.legend .dot.red { background: #e74c3c; }
+
+/* ============ MODO BOTONES +1/-1/0 ============ */
+.buttons-pad {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 2fr 1fr;
+    gap: 10px;
+    padding: 15px;
+    padding-bottom: max(15px, env(safe-area-inset-bottom));
+    height: 45vh;
+    min-height: 320px;
+}
+
+.btn-big {
+    border: none; border-radius: 16px; color: white;
+    font-size: 2.5rem; font-weight: 900; cursor: pointer;
+    font-family: inherit;
+    transition: transform 0.12s, filter 0.15s, box-shadow 0.2s;
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 4px;
+}
+.btn-big:active { transform: scale(0.94); filter: brightness(1.15); }
+
+.btn-big .sub { font-size: 0.8rem; font-weight: 600; opacity: 0.85; }
+
+.btn-big.btn-minus {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    box-shadow: 0 6px 20px var(--minus-glow);
+}
+.btn-big.btn-neutral {
+    background: linear-gradient(135deg, #7f8c8d, #5d6d7e);
+    box-shadow: 0 6px 20px rgba(127, 140, 141, 0.4);
+}
+.btn-big.btn-plus {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    box-shadow: 0 6px 20px var(--plus-glow);
+}
+.btn-big.btn-reset-buttons {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, #4a90e2, #357abd);
+    font-size: 1.3rem;
+    box-shadow: 0 6px 20px var(--accent-glow);
+}
+.btn-big.btn-reset-buttons.confirming {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    animation: pulse-btn 0.7s infinite;
+}
+</style>
+</head>
+<body>
+
+<div class="bg-particles" id="bgParticles"></div>
+
+<!-- ============ MENÚ PRINCIPAL ============ -->
+<div class="screen active" id="menuScreen">
+    <div class="menu-screen">
+        <div class="menu-title">BLACKJACK</div>
+        <div class="menu-subtitle">Elegí un modo de conteo</div>
+
+        <button class="menu-btn hilo" onclick="goTo('hilo')">
+            <span class="icon">🃏</span>
+            <div class="label-group">
+                <span>Hi-Lo con cartas</span>
+                <span class="sublabel">Tocás la carta que salió</span>
+            </div>
+        </button>
+
+        <button class="menu-btn buttons" onclick="goTo('buttons')">
+            <span class="icon">➕➖</span>
+            <div class="label-group">
+                <span>Hi-Lo con botones</span>
+                <span class="sublabel">+1 / 0 / -1 clásico</span>
+            </div>
+        </button>
+
+        <button class="menu-btn specific" onclick="goTo('specific')">
+            <span class="icon">🎴</span>
+            <div class="label-group">
+                <span>Contador específico</span>
+                <span class="sublabel">Qué cartas salieron y cuántas quedan</span>
+            </div>
+        </button>
+    </div>
+</div>
+
+<!-- ============ MODO HI-LO CON CARTAS ============ -->
+<div class="screen" id="hiloScreen">
+    <header>
+        <button class="back-btn" onclick="goTo('menu')">← Menú</button>
+        <div class="deck-selector" id="deckSelectorHilo"></div>
+    </header>
+
+    <div class="history" id="historyHilo"></div>
+
+    <div class="stats">
+        <div class="running" id="runningCount">0</div>
+        <div class="true" id="trueCount">Cuenta total: 0.0</div>
+        <div class="seen" id="cardsSeen">Cartas vistas: 0</div>
+    </div>
+
+    <div class="cards-grid" id="cardsGridHilo"></div>
+    <button class="reset-btn" id="resetBtnHilo">RESET</button>
+</div>
+
+<!-- ============ MODO BOTONES +1/-1/0 ============ -->
+<div class="screen" id="buttonsScreen">
+    <header>
+        <button class="back-btn" onclick="goTo('menu')">← Menú</button>
+        <div class="deck-selector" id="deckSelectorButtons"></div>
+    </header>
+
+    <div class="history" id="historyButtons"></div>
+
+    <div class="stats">
+        <div class="running" id="runningCountButtons">0</div>
+        <div class="true" id="trueCountButtons">Cuenta total: 0.0</div>
+        <div class="seen" id="cardsSeenButtons">Cartas vistas: 0</div>
+    </div>
+
+    <div class="buttons-pad">
+        <button class="btn-big btn-minus" id="btnMinus">
+            <span>−1</span>
+            <span class="sub">10 J Q K A</span>
+        </button>
+        <button class="btn-big btn-neutral" id="btnNeutral">
+            <span>0</span>
+            <span class="sub">7 8 9</span>
+        </button>
+        <button class="btn-big btn-plus" id="btnPlus">
+            <span>+1</span>
+            <span class="sub">2 3 4 5 6</span>
+        </button>
+        <button class="btn-big btn-reset-buttons" id="resetBtnButtons">RESET</button>
+    </div>
+</div>
+
+<!-- ============ MODO ESPECÍFICO ============ -->
+<div class="screen" id="specificScreen">
+    <header>
+        <button class="back-btn" onclick="goTo('menu')">← Menú</button>
+        <button class="toggle-btn" id="toggleRemaining">👁️ Ver quedan</button>
+        <div class="deck-selector" id="deckSelectorSpec"></div>
+    </header>
+
+    <div class="stats" style="flex: 0; padding: 8px 10px 4px;">
+        <div class="running" id="runningCountSpec" style="font-size: 60px;">0</div>
+        <div class="true" id="trueCountSpec" style="font-size: 20px; margin-top: 4px;">Cuenta total: 0.0</div>
+    </div>
+
+    <div class="specific-panel" id="specificPanel"></div>
+
+    <div class="legend">
+        <span><span class="dot green"></span> Quedan muchas</span>
+        <span><span class="dot red"></span> Quedan pocas</span>
+    </div>
+
+    <div class="cards-grid" id="cardsGridSpec" style="padding-top: 0;"></div>
+    <button class="reset-btn" id="resetBtnSpec">RESET</button>
+</div>
+
+<script>
+// ============ CONSTANTES ============
+const CARD_VALUES = {
+    'A': -1, '2': 1, '3': 1, '4': 1, '5': 1, '6': 1,
+    '7': 0, '8': 0, '9': 0, '10': -1, 'J': -1, 'Q': -1, 'K': -1
+};
+const CARD_SUITS = {
+    'A': '♠', '2': '♥', '3': '♦', '4': '♣', '5': '♠',
+    '6': '♥', '7': '♦', '8': '♣', '9': '♠', '10': '♥',
+    'J': '♦', 'Q': '♣', 'K': '♠'
+};
+const RED_CARDS = ['A','10','J','Q','K'];
+const ALL_CARDS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+
+// ============ ESTADO ============
+let hiloState = { count: 0, decks: 6, cardsSeen: 0, history: [] };
+let buttonsState = { count: 0, decks: 6, cardsSeen: 0, history: [] };
+let specState = { count: 0, decks: 6, seen: {}, history: [], showRemaining: true };
+ALL_CARDS.forEach(c => specState.seen[c] = 0);
+
+// ============ ELEMENTOS ============
+const bgParticles = document.getElementById('bgParticles');
+
+// Hi-Lo cartas
+const historyHilo = document.getElementById('historyHilo');
+const deckSelHilo = document.getElementById('deckSelectorHilo');
+const cardsGridHilo = document.getElementById('cardsGridHilo');
+const runningEl = document.getElementById('runningCount');
+const trueEl = document.getElementById('trueCount');
+const seenEl = document.getElementById('cardsSeen');
+const resetBtnHilo = document.getElementById('resetBtnHilo');
+
+// Hi-Lo botones
+const historyButtons = document.getElementById('historyButtons');
+const deckSelButtons = document.getElementById('deckSelectorButtons');
+const runningElButtons = document.getElementById('runningCountButtons');
+const trueElButtons = document.getElementById('trueCountButtons');
+const seenElButtons = document.getElementById('cardsSeenButtons');
+const resetBtnButtons = document.getElementById('resetBtnButtons');
+
+// Specific
+const deckSelSpec = document.getElementById('deckSelectorSpec');
+const cardsGridSpec = document.getElementById('cardsGridSpec');
+const specificPanel = document.getElementById('specificPanel');
+const runningElSpec = document.getElementById('runningCountSpec');
+const trueElSpec = document.getElementById('trueCountSpec');
+const resetBtnSpec = document.getElementById('resetBtnSpec');
+const toggleRemainingBtn = document.getElementById('toggleRemaining');
+
+// ============ NAVEGACIÓN ============
+function goTo(screen) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    if (screen === 'menu') document.getElementById('menuScreen').classList.add('active');
+    else if (screen === 'hilo') document.getElementById('hiloScreen').classList.add('active');
+    else if (screen === 'buttons') document.getElementById('buttonsScreen').classList.add('active');
+    else if (screen === 'specific') {
+        document.getElementById('specificScreen').classList.add('active');
+        renderSpecific();
+    }
+    saveAll();
+}
+
+// ============ PERSISTENCIA ============
+function saveAll() {
+    try {
+        localStorage.setItem('bjHiloV6', JSON.stringify(hiloState));
+        localStorage.setItem('bjButtonsV6', JSON.stringify(buttonsState));
+        localStorage.setItem('bjSpecV6', JSON.stringify(specState));
+        localStorage.setItem('bjScreenV6', document.querySelector('.screen.active').id);
+    } catch(e){}
+}
+function loadAll() {
+    try {
+        const h = localStorage.getItem('bjHiloV6');
+        if (h) hiloState = Object.assign(hiloState, JSON.parse(h));
+        const b = localStorage.getItem('bjButtonsV6');
+        if (b) buttonsState = Object.assign(buttonsState, JSON.parse(b));
+        const s = localStorage.getItem('bjSpecV6');
+        if (s) {
+            specState = Object.assign(specState, JSON.parse(s));
+            ALL_CARDS.forEach(c => { if (specState.seen[c] === undefined) specState.seen[c] = 0; });
+            if (specState.showRemaining === undefined) specState.showRemaining = true;
+        }
+        const screen = localStorage.getItem('bjScreenV6');
+        if (screen) {
+            const id = screen.replace('Screen', '');
+            if (id !== 'menu') goTo(id);
+        }
+    } catch(e){}
+}
+
+// ============ PARTÍCULAS FONDO ============
+function initBgParticles() {
+    for (let i = 0; i < 20; i++) {
+        const p = document.createElement('div');
+        p.className = 'bg-particle';
+        p.style.left = Math.random() * 100 + '%';
+        p.style.animationDuration = (8 + Math.random() * 10) + 's';
+        p.style.animationDelay = (Math.random() * 10) + 's';
+        bgParticles.appendChild(p);
+    }
+}
+
+// ============ UTILS ============
+function bump(el) {
+    el.classList.remove('bump');
+    void el.offsetWidth;
+    el.classList.add('bump');
+}
+function shake(el) {
+    el.classList.remove('shake');
+    void el.offsetWidth;
+    el.classList.add('shake');
+}
+function spawnParticles(x, y, color) {
+    for (let i = 0; i < 10; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = x + 'px';
+        p.style.top = y + 'px';
+        p.style.background = color;
+        const angle = (Math.PI * 2 * i) / 10;
+        const dist = 40 + Math.random() * 40;
+        p.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+        p.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+        document.body.appendChild(p);
+        setTimeout(() => p.remove(), 700);
+    }
+}
+function flyCardToHistory(fromEl, card, historyContainer) {
+    const fromRect = fromEl.getBoundingClientRect();
+    const targetRect = historyContainer.getBoundingClientRect();
+    const fly = document.createElement('div');
+    fly.className = 'flying-card';
+    fly.textContent = card;
+    fly.style.left = fromRect.left + 'px';
+    fly.style.top = fromRect.top + 'px';
+    fly.style.width = fromRect.width + 'px';
+    fly.style.height = fromRect.height + 'px';
+    fly.style.color = RED_CARDS.includes(card) ? '#c0392b' : '#1a1a28';
+    document.body.appendChild(fly);
+    requestAnimationFrame(() => {
+        fly.style.left = (targetRect.left + 10) + 'px';
+        fly.style.top = (targetRect.top + 10) + 'px';
+        fly.style.width = '40px';
+        fly.style.height = '40px';
+        fly.style.opacity = '0.3';
+        fly.style.transform = 'rotate(-360deg)';
+    });
+    setTimeout(() => fly.remove(), 600);
+}
+
+// Ripple global
+document.addEventListener('click', (e) => {
+    const t = e.target.closest('button');
+    if (!t) return;
+    const rect = t.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    const ripple = document.createElement('span');
+    ripple.className = 'ripple';
+    ripple.style.width = ripple.style.height = size + 'px';
+    ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+    ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+    t.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 600);
+});
+
+// ==================================================
+// ============ MODO HI-LO CON CARTAS ============
+// ==================================================
+function renderDecksHilo() {
+    deckSelHilo.innerHTML = '';
+    [1,2,4,6,8].forEach(n => {
+        const b = document.createElement('button');
+        b.className = 'deck-btn' + (n === hiloState.decks ? ' active' : '');
+        b.textContent = n;
+        b.onclick = () => { hiloState.decks = n; saveAll(); renderHilo(); };
+        deckSelHilo.appendChild(b);
+    });
+}
+
+function renderCardsHilo() {
+    cardsGridHilo.innerHTML = '';
+    ALL_CARDS.forEach(card => {
+        const b = document.createElement('button');
+        b.className = 'card-btn ' + (RED_CARDS.includes(card) ? 'red' : 'black');
+        b.innerHTML = `<span>${card}</span><span class="suit">${CARD_SUITS[card]}</span>`;
+        b.onclick = (e) => addCardHilo(card, e, b);
+        cardsGridHilo.appendChild(b);
+    });
+}
+
+function renderHistoryHilo() {
+    historyHilo.innerHTML = '';
+    const last = hiloState.history.slice(-15).reverse();
+    last.forEach(card => {
+        const v = CARD_VALUES[card];
+        const chip = document.createElement('div');
+        chip.className = 'chip ' + (v > 0 ? 'p' : v < 0 ? 'm' : 'n');
+        chip.textContent = card;
+        historyHilo.appendChild(chip);
+    });
+    if (hiloState.history.length > 0) {
+        const undo = document.createElement('button');
+        undo.className = 'undo-btn';
+        undo.textContent = '↶ Deshacer';
+        undo.onclick = undoHilo;
+        historyHilo.appendChild(undo);
+    }
+    historyHilo.scrollLeft = 0;
+}
+
+function renderHilo() {
+    runningEl.textContent = hiloState.count;
+    const tc = hiloState.count / hiloState.decks;
+    trueEl.textContent = 'Cuenta total: ' + (tc > 0 ? '+' : '') + tc.toFixed(1);
+    seenEl.textContent = 'Cartas vistas: ' + hiloState.cardsSeen;
+
+    runningEl.classList.remove('pos', 'neg');
+    if (hiloState.count > 0) runningEl.classList.add('pos');
+    else if (hiloState.count < 0) runningEl.classList.add('neg');
+
+    trueEl.classList.remove('pos', 'neg');
+    if (tc > 0) trueEl.classList.add('pos');
+    else if (tc < 0) trueEl.classList.add('neg');
+
+    renderDecksHilo();
+    renderHistoryHilo();
+}
+
+function addCardHilo(card, event, btnEl) {
+    const oldSign = Math.sign(hiloState.count);
+    hiloState.count += CARD_VALUES[card];
+    hiloState.cardsSeen += 1;
+    hiloState.history.push(card);
+    saveAll();
+
+    if (event) {
+        const v = CARD_VALUES[card];
+        const color = v > 0 ? '#2ecc71' : v < 0 ? '#e74c3c' : '#7f8c8d';
+        spawnParticles(event.clientX, event.clientY, color);
+    }
+    if (btnEl) flyCardToHistory(btnEl, card, historyHilo);
+
+    renderHilo();
+    bump(runningEl);
+    bump(trueEl);
+
+    const newSign = Math.sign(hiloState.count);
+    if (oldSign !== newSign && oldSign !== 0) shake(runningEl);
+    if (navigator.vibrate) navigator.vibrate(25);
+}
+
+function undoHilo() {
+    const card = hiloState.history.pop();
+    if (!card) return;
+    hiloState.count -= CARD_VALUES[card];
+    hiloState.cardsSeen = Math.max(0, hiloState.cardsSeen - 1);
+    saveAll();
+    renderHilo();
+    bump(runningEl);
+}
+
+let resetTimerHilo = null;
+resetBtnHilo.onclick = () => {
+    if (resetBtnHilo.classList.contains('confirming')) {
+        hiloState.count = 0;
+        hiloState.cardsSeen = 0;
+        hiloState.history = [];
+        saveAll();
+        renderHilo();
+        bump(runningEl);
+        resetBtnHilo.classList.remove('confirming');
+        resetBtnHilo.textContent = 'RESET';
+        clearTimeout(resetTimerHilo);
+    } else {
+        resetBtnHilo.classList.add('confirming');
+        resetBtnHilo.textContent = '¿SEGURO? TOCÁ DE NUEVO';
+        resetTimerHilo = setTimeout(() => {
+            resetBtnHilo.classList.remove('confirming');
+            resetBtnHilo.textContent = 'RESET';
+        }, 3000);
+    }
+};
+
+// ==================================================
+// ============ MODO HI-LO CON BOTONES ============
+// ==================================================
+function renderDecksButtons() {
+    deckSelButtons.innerHTML = '';
+    [1,2,4,6,8].forEach(n => {
+        const b = document.createElement('button');
+        b.className = 'deck-btn' + (n === buttonsState.decks ? ' active' : '');
+        b.textContent = n;
+        b.onclick = () => { buttonsState.decks = n; saveAll(); renderButtons(); };
+        deckSelButtons.appendChild(b);
+    });
+}
+
+function renderHistoryButtons() {
+    historyButtons.innerHTML = '';
+    const last = buttonsState.history.slice(-15).reverse();
+    last.forEach(item => {
+        const v = item.val;
+        const chip = document.createElement('div');
+        chip.className = 'chip ' + (v > 0 ? 'p' : v < 0 ? 'm' : 'n');
+        chip.textContent = v > 0 ? '+1' : v < 0 ? '-1' : '0';
+        historyButtons.appendChild(chip);
+    });
+    if (buttonsState.history.length > 0) {
+        const undo = document.createElement('button');
+        undo.className = 'undo-btn';
+        undo.textContent = '↶ Deshacer';
+        undo.onclick = undoButtons;
+        historyButtons.appendChild(undo);
+    }
+    historyButtons.scrollLeft = 0;
+}
+
+function renderButtons() {
+    runningElButtons.textContent = buttonsState.count;
+    const tc = buttonsState.count / buttonsState.decks;
+    trueElButtons.textContent = 'Cuenta total: ' + (tc > 0 ? '+' : '') + tc.toFixed(1);
+    seenElButtons.textContent = 'Cartas vistas: ' + buttonsState.cardsSeen;
+
+    runningElButtons.classList.remove('pos', 'neg');
+    if (buttonsState.count > 0) runningElButtons.classList.add('pos');
+    else if (buttonsState.count < 0) runningElButtons.classList.add('neg');
+
+    trueElButtons.classList.remove('pos', 'neg');
+    if (tc > 0) trueElButtons.classList.add('pos');
+    else if (tc < 0) trueElButtons.classList.add('neg');
+
+    renderDecksButtons();
+    renderHistoryButtons();
+}
+
+function addValueButtons(val, event) {
+    const oldSign = Math.sign(buttonsState.count);
+    buttonsState.count += val;
+    buttonsState.cardsSeen += 1;
+    buttonsState.history.push({ val: val });
+    saveAll();
+
+    if (event) {
+        const color = val > 0 ? '#2ecc71' : val < 0 ? '#e74c3c' : '#7f8c8d';
+        spawnParticles(event.clientX, event.clientY, color);
+    }
+
+    renderButtons();
+    bump(runningElButtons);
+    bump(trueElButtons);
+
+    const newSign = Math.sign(buttonsState.count);
+    if (oldSign !== newSign && oldSign !== 0) shake(runningElButtons);
+    if (navigator.vibrate) navigator.vibrate(25);
+}
+
+function undoButtons() {
+    const item = buttonsState.history.pop();
+    if (!item) return;
+    buttonsState.count -= item.val;
+    buttonsState.cardsSeen = Math.max(0, buttonsState.cardsSeen - 1);
+    saveAll();
+    renderButtons();
+    bump(runningElButtons);
+}
+
+document.getElementById('btnPlus').onclick = (e) => addValueButtons(1, e);
+document.getElementById('btnMinus').onclick = (e) => addValueButtons(-1, e);
+document.getElementById('btnNeutral').onclick = (e) => addValueButtons(0, e);
+
+let resetTimerButtons = null;
+resetBtnButtons.onclick = () => {
+    if (resetBtnButtons.classList.contains('confirming')) {
+        buttonsState.count = 0;
+        buttonsState.cardsSeen = 0;
+        buttonsState.history = [];
+        saveAll();
+        renderButtons();
+        bump(runningElButtons);
+        resetBtnButtons.classList.remove('confirming');
+        resetBtnButtons.textContent = 'RESET';
+        clearTimeout(resetTimerButtons);
+    } else {
+        resetBtnButtons.classList.add('confirming');
+        resetBtnButtons.textContent = '¿SEGURO? TOCÁ DE NUEVO';
+        resetTimerButtons = setTimeout(() => {
+            resetBtnButtons.classList.remove('confirming');
+            resetBtnButtons.textContent = 'RESET';
+        }, 3000);
+    }
+};
+
+// ==================================================
+// ============ MODO ESPECÍFICO ============
+// ==================================================
+function totalPerCard(decks) {
+    return 4 * decks;
+}
+
+function renderDecksSpec() {
+    deckSelSpec.innerHTML = '';
+    [1,2,4,6,8].forEach(n => {
+        const b = document.createElement('button');
+        b.className = 'deck-btn' + (n === specState.decks ? ' active' : '');
+        b.textContent = n;
+        b.onclick = () => { specState.decks = n; saveAll(); renderSpecific(); };
+        deckSelSpec.appendChild(b);
+    });
+}
+
+function renderCardsSpec() {
+    cardsGridSpec.innerHTML = '';
+    ALL_CARDS.forEach(card => {
+        const b = document.createElement('button');
+        b.className = 'card-btn ' + (RED_CARDS.includes(card) ? 'red' : 'black');
+        b.innerHTML = `<span>${card}</span><span class="suit">${CARD_SUITS[card]}</span>`;
+        b.onclick = (e) => addCardSpec(card, e, b);
+        cardsGridSpec.appendChild(b);
+    });
+}
+
+function renderPanelSpec() {
+    specificPanel.innerHTML = '';
+    const total = totalPerCard(specState.decks);
+    ALL_CARDS.forEach(card => {
+        const seen = specState.seen[card] || 0;
+        const remaining = total - seen;
+        const pct = (remaining / total) * 100;
+
+        const row = document.createElement('div');
+        row.className = 'card-row';
+        if (remaining === 0) row.classList.add('empty');
+        else if (specState.showRemaining && pct < 25) row.classList.add('low');
+
+        const badge = document.createElement('div');
+        badge.className = 'card-badge ' + (RED_CARDS.includes(card) ? 'red' : '');
+        badge.textContent = card;
+
+        const info = document.createElement('div');
+        info.className = 'card-info';
+
+        const countDiv = document.createElement('div');
+        countDiv.className = 'card-count';
+
+        if (specState.showRemaining) {
+            countDiv.innerHTML = `<span class="left">Quedan ${remaining}</span><span class="right">${seen} vistas / ${total}</span>`;
+        } else {
+            countDiv.innerHTML = `<span class="left">${seen} vistas</span><span class="right">de ${total}</span>`;
+        }
+
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        const fill = document.createElement('div');
+        fill.className = 'bar-fill';
+        fill.style.width = pct + '%';
+        bar.appendChild(fill);
+
+        info.appendChild(countDiv);
+        if (specState.showRemaining) info.appendChild(bar);
+        row.appendChild(badge);
+        row.appendChild(info);
+        specificPanel.appendChild(row);
+    });
+}
+
+function renderSpecStats() {
+    runningElSpec.textContent = specState.count;
+    const tc = specState.count / specState.decks;
+    trueElSpec.textContent = 'Cuenta total: ' + (tc > 0 ? '+' : '') + tc.toFixed(1);
+
+    runningElSpec.classList.remove('pos', 'neg');
+    if (specState.count > 0) runningElSpec.classList.add('pos');
+    else if (specState.count < 0) runningElSpec.classList.add('neg');
+
+    trueElSpec.classList.remove('pos', 'neg');
+    if (tc > 0) trueElSpec.classList.add('pos');
+    else if (tc < 0) trueElSpec.classList.add('neg');
+}
+
+function renderSpecific() {
+    renderDecksSpec();
+    renderCardsSpec();
+    renderPanelSpec();
+    renderSpecStats();
+}
+
+function addCardSpec(card, event, btnEl) {
+    const total = totalPerCard(specState.decks);
+    if ((specState.seen[card] || 0) >= total) {
+        if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+        return;
+    }
+    const oldSign = Math.sign(specState.count);
+    specState.seen[card] = (specState.seen[card] || 0) + 1;
+    specState.count += CARD_VALUES[card];
+    specState.history.push(card);
+    saveAll();
+
+    if (event) {
+        const v = CARD_VALUES[card];
+        const color = v > 0 ? '#2ecc71' : v < 0 ? '#e74c3c' : '#7f8c8d';
+        spawnParticles(event.clientX, event.clientY, color);
+    }
+
+    renderSpecific();
+    bump(runningElSpec);
+    bump(trueElSpec);
+
+    const newSign = Math.sign(specState.count);
+    if (oldSign !== newSign && oldSign !== 0) shake(runningElSpec);
+    if (navigator.vibrate) navigator.vibrate(25);
+}
+
+let resetTimerSpec = null;
+resetBtnSpec.onclick = () => {
+    if (resetBtnSpec.classList.contains('confirming')) {
+        specState.count = 0;
+        specState.history = [];
+        ALL_CARDS.forEach(c => specState.seen[c] = 0);
+        saveAll();
+        renderSpecific();
+        bump(runningElSpec);
+        resetBtnSpec.classList.remove('confirming');
+        resetBtnSpec.textContent = 'RESET';
+        clearTimeout(resetTimerSpec);
+    } else {
+        resetBtnSpec.classList.add('confirming');
+        resetBtnSpec.textContent = '¿SEGURO? TOCÁ DE NUEVO';
+        resetTimerSpec = setTimeout(() => {
+            resetBtnSpec.classList.remove('confirming');
+            resetBtnSpec.textContent = 'RESET';
+        }, 3000);
+    }
+};
+
+// ============ TOGGLE VER QUEDAN ============
+function updateToggleVisual() {
+    if (specState.showRemaining) {
+        toggleRemainingBtn.classList.add('active');
+        toggleRemainingBtn.textContent = '👁️ Ver quedan';
+    } else {
+        toggleRemainingBtn.classList.remove('active');
+        toggleRemainingBtn.textContent = '🙈 Oculto';
+    }
+}
+
+toggleRemainingBtn.onclick = () => {
+    specState.showRemaining = !specState.showRemaining;
+    updateToggleVisual();
+    saveAll();
+    renderPanelSpec();
+};
+
+// ============ INIT ============
+initBgParticles();
+loadAll();
+updateToggleVisual();
+renderCardsHilo();
+renderHilo();
+renderButtons();
+renderCardsSpec();
+renderSpecific();
+</script>
+</body>
+</html>
